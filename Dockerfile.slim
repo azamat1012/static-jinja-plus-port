@@ -1,0 +1,18 @@
+FROM python:3.12-slim
+
+ARG STATICJINJAPLUS_VERSION=latest
+
+RUN apt-get update && \
+    apt-get install -y --no-install-recommends git && \
+    apt-get clean && rm -rf /var/lib/apt/lists/*
+
+RUN python -m venv /opt/venv
+
+RUN /opt/venv/bin/pip install --no-cache-dir --upgrade pip && \
+    /opt/venv/bin/pip install --no-cache-dir "staticjinjaplus${STATICJINJAPLUS_VERSION:+==${STATICJINJAPLUS_VERSION}}"
+
+ENV PATH="/opt/venv/bin:$PATH"
+
+WORKDIR /workspace
+
+CMD ["staticjinjaplus", "build"]
