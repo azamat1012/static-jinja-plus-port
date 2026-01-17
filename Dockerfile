@@ -1,19 +1,39 @@
 FROM ubuntu:24.04
 
 ARG STATICJINJAPLUS_VERSION=latest
+ARG STATICJINJAPLUS_SHA256=""
 
-RUN apt-get update && \
+RUN if [ "$STATICJINJAPLUS_VERSION" = "latest" ]; then \
+        DOWNLOAD_URL="https://github.com/staticjinja/staticjinjaplus/archive/refs/heads/main.tar.gz"; \
+    elif [ "$STATICJINJAPLUS_VERSION" = "develop" ]; then \
+        DOWNLOAD_URL="https://github.com/staticjinja/staticjinjaplus/archive/refs/heads/develop.tar.gz"; \
+    else \
+        DOWNLOAD_URL="https://github.com/staticjinja/staticjinjaplus/archive/refs/tags/v${STATICJINJAPLUS_VERSION}.tar.gz"; \
+    fi && \
+    apt-get update && \
     apt-get install -y --no-install-recommends \
     python3.12 \
     python3.12-venv \
     python3-pip \
-    git \
+    wget \
+    ca-certificates \
     && apt-get clean && rm -rf /var/lib/apt/lists/* /tmp/* /var/tmp/*
 
 RUN python3.12 -m venv /opt/venv
 
-RUN /opt/venv/bin/pip install --no-cache-dir --upgrade pip && \
-    /opt/venv/bin/pip install --no-cache-dir "staticjinjaplus${STATICJINJAPLUS_VERSION:+==${STATICJINJAPLUS_VERSION}}"
+WORKDIR /tmp
+RUN if [ -n "$STATICJINJAPLUS_SHA256" ]; then \
+        echo "Скачивание с проверкой SHA256: $STATICJINJAPLUS_SHA256"; \
+        wget -O staticjinjaplus.tar.gz "$DOWNLOAD_URL" && \
+        echo "$STATICJINJAPLUS_SHA256 staticjinjaplus.tar.gz" | sha256sum -c - && \
+        tar -xzf staticjinjaplus.tar.gz && \
+        cd staticjinjaplus-* && \
+        /opt/venv/bin/pip install --no-cache-dir .; \
+    else \
+        echo "Скачивание без проверки SHA256"; \
+        /opt/venv/bin/pip install --no-cache-dir --upgrade pip && \
+        /opt/venv/bin/pip install --no-cache-dir "staticjinjaplus${STATICJINJAPLUS_VERSION:+==${STATICJINJAPLUS_VERSION}}"; \
+    fi
 
 ENV PATH="/opt/venv/bin:$PATH"
 
